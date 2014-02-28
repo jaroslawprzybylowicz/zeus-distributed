@@ -574,7 +574,7 @@ __sandbox_task_check(const task_t * ptask)
         }
         if (!((S_IRUSR & s.st_mode) && (s.st_uid == getuid())) &&
             !((S_IRGRP & s.st_mode) && (s.st_gid == getgid())) &&
-            !(S_IROTH & st.st_mode) && !(getuid() == (uid_t)0))
+            !(S_IROTH & s.st_mode) && !(getuid() == (uid_t)0))
         {
             FUNC_RET("%d", false);
         }
