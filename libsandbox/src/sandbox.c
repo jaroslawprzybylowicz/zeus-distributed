@@ -31,7 +31,7 @@
 
 #include "sandbox.h"
 #include "platform.h"
-#include "internal.h" 
+#include "internal.h"
 #include "config.h"
 
 #include <errno.h>              /* ECHILD, EINVAL */
@@ -417,7 +417,7 @@ __sandbox_task_init(task_t * ptask, const char * argv[])
     }
     ptask->comm.buff[offset] = '\0';
     ptask->comm.args[argc] = -1;
-    
+    ptask->env = NULL;
     strcpy(ptask->jail, "/");
     ptask->uid = getuid();
     ptask->gid = getgid();
@@ -749,7 +749,7 @@ __sandbox_task_execute(task_t * ptask)
     }
     
     /* Execute the targeted program */
-    if (execve(argv[0], argv, NULL) != 0)
+    if (execve(argv[0], argv, ptask->env) != 0)
     {
         WARN("execve() failed unexpectedly");
         return errno;

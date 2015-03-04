@@ -124,6 +124,7 @@ typedef rlim_t res_t;
 typedef struct
 {
     command_t comm;             /**< command (with arguments) to be executed */
+    char ** env;                /**< the set of env vars to pass through */
     char jail[SBOX_PATH_MAX];   /**< chroot to this path before running cmd */
     uid_t uid;                  /**< run command as this user */
     gid_t gid;                  /**< run command as member of this group */
