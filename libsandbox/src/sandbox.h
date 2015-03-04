@@ -131,6 +131,8 @@ typedef struct
     int ifd;                    /**< file descriptor for task input */
     int ofd;                    /**< file descriptor for task output */
     int efd;                    /**< file descriptor for task error log */
+    int extra_read_fd;          /**< extra fd for task reads. Exposed as #3 */
+    int extra_write_fd;         /**< extra fd for task writes. Exposed as #4 */
     res_t quota[QUOTA_TOTAL];   /**< block the task program if quota exceeds */
 } task_t;
 

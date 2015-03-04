@@ -424,6 +424,8 @@ __sandbox_task_init(task_t * ptask, const char * argv[])
     ptask->ifd = STDIN_FILENO;
     ptask->ofd = STDOUT_FILENO;
     ptask->efd = STDERR_FILENO;
+    ptask->extra_read_fd = -1;
+    ptask->extra_write_fd = -1;
     ptask->quota[S_QUOTA_WALLCLOCK] = SBOX_QUOTA_INF;
     ptask->quota[S_QUOTA_CPU] = SBOX_QUOTA_INF;
     ptask->quota[S_QUOTA_MEMORY] = SBOX_QUOTA_INF;
@@ -563,6 +565,38 @@ __sandbox_task_check(const task_t * ptask)
     }
     DBUG("passed error channel validity test");
     
+    if (ptask->extra_read_fd != -1)
+    {
+        if (fstat(ptask->extra_read_fd, &s) < 0 ||
+            !(S_ISCHR(s.st_mode) || S_ISREG(s.st_mode) || S_ISFIFO(s.st_mode)))
+        {
+          FUNC_RET("%d", false);
+        }
+        if (!((S_IRUSR & s.st_mode) && (s.st_uid == getuid())) &&
+            !((S_IRGRP & s.st_mode) && (s.st_gid == getgid())) &&
+            !(S_IROTH & s.st_mode) && !(getuid() == (uid_t)0))
+        {
+            FUNC_RET("%d", false);
+        }
+        DBUG("passed extra read fd validity test");
+    }
+
+    if (ptask->extra_write_fd != -1)
+    {
+        if ((fstat(ptask->extra_write_fd, &s) < 0) ||
+            !(S_ISCHR(s.st_mode) || S_ISREG(s.st_mode) || S_ISFIFO(s.st_mode)))
+        {
+            FUNC_RET("%d", false);
+        }
+        if (!((S_IWUSR & s.st_mode) && (s.st_uid == getuid())) && 
+            !((S_IWGRP & s.st_mode) && (s.st_gid == getgid())) && 
+            !(S_IWOTH & s.st_mode) && !(getuid() == (uid_t)0))
+        {
+            FUNC_RET("%d", false);
+        }
+        DBUG("passed extra write fd channel validity test");
+    }
+
     FUNC_RET("%d", true);
 }
 
@@ -583,7 +617,8 @@ __sandbox_task_execute(task_t * ptask)
     int fd;
     for (fd = 0; fd < FILENO_MAX; fd++)
     {
-        if ((fd == ptask->ifd) || (fd == ptask->ofd) || (fd == ptask->efd))
+        if ((fd == ptask->ifd) || (fd == ptask->ofd) || (fd == ptask->efd) ||
+            (fd == ptask->extra_read_fd) || (fd == ptask->extra_write_fd))
         {
             continue;
         }
@@ -612,6 +647,20 @@ __sandbox_task_execute(task_t * ptask)
         return EXIT_FAILURE;
     }
     DBUG("dup2: %d->%d", ptask->ifd, STDIN_FILENO);
+
+    if (dup2(ptask->extra_read_fd, 3) < 0)
+    {
+        WARN("failed to redirect extra read channel");
+        return EXIT_FAILURE;
+    }
+    DBUG("dup2: %d->%d", ptask->extra_read_fd, 3);
+
+    if (dup2(ptask->extra_write_fd, 4) < 0)
+    {
+        WARN("failed to redirect extra write channel");
+        return EXIT_FAILURE;
+    }
+    DBUG("dup2: %d->%d", ptask->extra_write_fd, 4);
     
     /* Apply security restrictions */
     
